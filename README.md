@@ -5,6 +5,7 @@
 ## 技术栈
 
 ### 前端
+
 - **框架**: React 19 + TypeScript
 - **构建工具**: Vite (rolldown)
 - **状态管理**: Zustand
@@ -13,6 +14,7 @@
 - **样式**: CSS Variables + 玻璃拟态设计
 
 ### 后端
+
 - **框架**: Express.js + TypeScript
 - **运行时**: Node.js (ES Modules)
 - **开发工具**: tsx (热重载)
@@ -68,6 +70,7 @@ adwall/
 #### 方式一：前后端分离（推荐）
 
 1. **安装依赖**：
+
    ```bash
    # 安装前端依赖
    npm install
@@ -79,6 +82,7 @@ adwall/
    ```
 
 2. **启动服务**：
+
    ```bash
    # 同时启动前后端（推荐）
    npm run dev:all
@@ -89,14 +93,15 @@ adwall/
    ```
 
 3. **访问应用**：
-   - 前端：http://localhost:5173
-   - 后端 API：http://localhost:3001/api
+   - 前端：<http://localhost:5173>
+   - 后端 API：<http://localhost:3001/api>
 
 #### 方式二：纯前端模式（localStorage）
 
 如果后端服务未启动，前端会自动降级到 localStorage 模式。
 
 或通过环境变量强制使用 localStorage：
+
 ```bash
 # 创建 .env.development 文件
 VITE_USE_LOCAL_STORAGE=true
@@ -133,13 +138,25 @@ npm run preview
 
 ## 环境配置
 
-创建 `.env.development` 或 `.env.production` 文件：
+创建 `.env.development` 文件：
 
 ```env
+# 开发环境
 # 后端 API 地址
 VITE_API_BASE_URL=http://localhost:3001
 
 # 是否使用 localStorage（可选）
+# VITE_USE_LOCAL_STORAGE=true
+```
+
+创建 `.env.production` 文件：
+
+```env
+# 生产环境配置
+# 后端 API 地址
+VITE_API_BASE_URL=https://adwall-thmr.onrender.com
+
+# 生产环境默认使用 HTTP API（可选）
 # VITE_USE_LOCAL_STORAGE=true
 ```
 
