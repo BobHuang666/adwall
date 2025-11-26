@@ -3,7 +3,7 @@ import AppShell from './AppShell'
 import { AdBoardPage } from '@features/ad-board/components/AdBoardPage'
 
 export const AppRouter = () => (
-  <BrowserRouter>
+  <BrowserRouter basename="/adwall">
     <AppShell>
       <Routes>
         <Route path="/" element={<AdBoardPage />} />
