@@ -12,6 +12,7 @@ type AdFormDrawerProps = {
   defaultValues?: Partial<AdDraft>
   mediaSlot?: React.ReactNode
   isProcessing: boolean
+  isLoadingSchema?: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (values: AdDraft) => Promise<void>
 }
@@ -80,6 +81,62 @@ const buildZodSchema = (fields: FormFieldConfig[]) => {
   return z.object(shape)
 }
 
+// 根据 schema 动态生成初始值
+const buildInitialValues = (
+  schema: FormFieldConfig[],
+  defaultValues?: Partial<AdDraft>,
+): Record<string, unknown> => {
+  const initial: Record<string, unknown> = {}
+  schema.forEach((field) => {
+    if (defaultValues && field.field in defaultValues) {
+      initial[field.field] = defaultValues[field.field as keyof AdDraft]
+    } else if (field.component === 'number') {
+      initial[field.field] = 0
+    } else if (field.field === 'mediaAssets' || field.field === 'videoUrls') {
+      initial[field.field] = []
+    } else {
+      initial[field.field] = ''
+    }
+  })
+  // 确保 mediaAssets 和 videoUrls 始终存在（即使不在 schema 中）
+  if (!('mediaAssets' in initial)) {
+    initial.mediaAssets = defaultValues?.mediaAssets ?? []
+  }
+  if (!('videoUrls' in initial)) {
+    initial.videoUrls = defaultValues?.videoUrls ?? []
+  }
+  return initial
+}
+
+// 根据 schema 动态生成提交数据
+const buildSubmitData = (
+  values: Record<string, unknown>,
+  schema: FormFieldConfig[],
+): AdDraft => {
+  const draft: Partial<AdDraft> = {}
+
+  // 根据 schema 中的字段映射数据
+  schema.forEach((field) => {
+    const value = values[field.field]
+    const fieldKey = field.field as keyof AdDraft
+
+    if (field.component === 'number') {
+      const numValue = typeof value === 'number' ? value : Number(value) || 0
+        ; (draft as Record<string, unknown>)[fieldKey] = numValue
+    } else if (fieldKey === 'mediaAssets' || fieldKey === 'videoUrls') {
+      ; (draft as Record<string, unknown>)[fieldKey] = (value as string[]) ?? []
+    } else {
+      ; (draft as Record<string, unknown>)[fieldKey] = (value as string) ?? ''
+    }
+  })
+
+  // 确保 mediaAssets 和 videoUrls 存在
+  draft.mediaAssets = (values.mediaAssets as string[]) ?? []
+  draft.videoUrls = (values.videoUrls as string[]) ?? []
+
+  return draft as AdDraft
+}
+
 export const AdFormDrawer = ({
   open,
   mode,
@@ -87,6 +144,7 @@ export const AdFormDrawer = ({
   defaultValues,
   mediaSlot,
   isProcessing,
+  isLoadingSchema = false,
   onOpenChange,
   onSubmit,
 }: AdFormDrawerProps) => {
@@ -103,22 +161,16 @@ export const AdFormDrawer = ({
   })
 
   useEffect(() => {
-    if (open) {
+    if (open && schema.length > 0) {
       if (mode === 'create') {
-        reset({
-          title: '',
-          author: '',
-          description: '',
-          url: '',
-          price: 0,
-          mediaAssets: [],
-          videoUrls: [],
-        })
+        // 根据 schema 动态生成初始值
+        reset(buildInitialValues(schema))
       } else {
-        reset(defaultValues)
+        // 编辑/复制模式：使用传入的 defaultValues，但确保所有 schema 字段都有值
+        reset(buildInitialValues(schema, defaultValues))
       }
     }
-  }, [open, mode, defaultValues, reset])
+  }, [open, mode, schema, defaultValues, reset])
 
   const titleMap: Record<AdFormMode, string> = {
     create: '新建广告',
@@ -149,61 +201,65 @@ export const AdFormDrawer = ({
           <form
             className="dialog__form"
             onSubmit={handleSubmit(async (values) => {
-              await onSubmit({
-                title: values.title as string,
-                author: values.author as string,
-                description: values.description as string,
-                url: values.url as string,
-                price: typeof values.price === 'number' ? values.price : Number(values.price) || 0,
-                mediaAssets: (values.mediaAssets as string[]) ?? [],
-                videoUrls: (values.videoUrls as string[]) ?? [],
-              })
+              // 根据 schema 动态生成提交数据
+              const submitData = buildSubmitData(values, schema)
+              await onSubmit(submitData)
             })}
           >
-            {schema.map((field) => (
-              <div key={field.field} className="form-field">
-                <label className="form-field__label">
-                  {field.label}
-                  {field.validator?.required !== false && (
-                    <span className="form-field__required">*</span>
-                  )}
-                </label>
-                <div className="form-field__wrapper">
-                  {field.component === 'textarea' ? (
-                    <textarea
-                      className="form-field__control"
-                      placeholder={field.placeholder}
-                      rows={3}
-                      {...register(field.field)}
-                    />
-                  ) : (
-                    <div className="form-field__input-wrapper">
-                      <input
+            {isLoadingSchema ? (
+              <div className="form-field">
+                <div className="form-field__label">加载表单配置中...</div>
+              </div>
+            ) : schema.length === 0 ? (
+              <div className="form-field">
+                <div className="form-field__error">表单配置加载失败，请刷新页面重试</div>
+              </div>
+            ) : (
+              schema.map((field) => (
+                <div key={field.field} className="form-field">
+                  <label className="form-field__label">
+                    {field.label}
+                    {field.validator?.required !== false && (
+                      <span className="form-field__required">*</span>
+                    )}
+                  </label>
+                  <div className="form-field__wrapper">
+                    {field.component === 'textarea' ? (
+                      <textarea
                         className="form-field__control"
-                        type={
-                          field.component === 'number'
-                            ? 'number'
-                            : field.component === 'url'
-                              ? 'url'
-                              : 'text'
-                        }
                         placeholder={field.placeholder}
-                        step={field.component === 'number' ? '0.01' : undefined}
+                        rows={3}
                         {...register(field.field)}
                       />
-                      {field.component === 'number' && (
-                        <span className="form-field__unit">元</span>
-                      )}
-                    </div>
-                  )}
-                  {errors[field.field]?.message ? (
-                    <span className="form-field__error">
-                      {errors[field.field]?.message?.toString()}
-                    </span>
-                  ) : null}
+                    ) : (
+                      <div className="form-field__input-wrapper">
+                        <input
+                          className="form-field__control"
+                          type={
+                            field.component === 'number'
+                              ? 'number'
+                              : field.component === 'url'
+                                ? 'url'
+                                : 'text'
+                          }
+                          placeholder={field.placeholder}
+                          step={field.component === 'number' ? '0.01' : undefined}
+                          {...register(field.field)}
+                        />
+                        {field.component === 'number' && (
+                          <span className="form-field__unit">元</span>
+                        )}
+                      </div>
+                    )}
+                    {errors[field.field]?.message ? (
+                      <span className="form-field__error">
+                        {errors[field.field]?.message?.toString()}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
 
             <div className="dialog__media-slot">
               <div className="media-slot__label">媒体上传（预留）</div>

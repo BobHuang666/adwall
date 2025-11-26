@@ -18,8 +18,10 @@ export const AdBoardPage = () => {
     ads,
     schema,
     isLoading,
+    isLoadingSchema,
     isProcessing,
     loadAds,
+    loadFormSchema,
     createAd,
     updateAd,
     duplicateAd,
@@ -53,10 +55,11 @@ export const AdBoardPage = () => {
     }
   }, [activeAd])
 
-  const openDrawer = (nextMode: AdFormMode, ad?: Ad) => {
+  const openDrawer = async (nextMode: AdFormMode, ad?: Ad) => {
     setMode(nextMode)
     setActiveAd(ad ?? null)
     setDrawerOpen(true)
+    await loadFormSchema()
   }
 
   const handleSubmit = async (payload: AdDraft) => {
@@ -128,7 +131,7 @@ export const AdBoardPage = () => {
         </div>
 
         {isLoading ? (
-          <div className="board__placeholder">加载广告数据中...</div>
+          <div className="board__placeholder">后端冷启动，加载广告数据中，请稍候...</div>
         ) : ads.length === 0 ? (
           <div className="board__placeholder">
             还没有广告，点击「新增广告」开始创建吧。
@@ -159,6 +162,7 @@ export const AdBoardPage = () => {
         schema={schema}
         defaultValues={defaultValues}
         isProcessing={isProcessing}
+        isLoadingSchema={isLoadingSchema}
         onSubmit={handleSubmit}
       />
 

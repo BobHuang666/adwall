@@ -59,9 +59,13 @@ adwall/
 - 🔄 **任务2：视频上传与播放**（接口已预留）
   - `POST /api/media/upload` 接口已创建
   - `mediaAssets`、`videoUrls` 字段已支持
-- 🔄 **任务3：动态表单渲染**（接口已预留）
-  - `GET /api/form-schema` 接口已实现
-  - 前端已支持动态表单渲染
+- ✅ **任务3：动态表单渲染**（已完成）
+  - `GET /api/form-schema` 接口已实现，返回 JSON 格式的表单配置
+  - 前端完全基于 schema 动态渲染表单项
+  - 使用 Zod 根据 schema 动态生成校验规则
+  - 表单字段映射完全动态化，无硬编码
+  - 实现按需加载：点击新增时请求表单配置
+  - 支持加载状态和错误处理
 
 ## 运行方式
 
@@ -208,9 +212,9 @@ npm run lint
 - `POST /api/ads/:id/click` - 点击广告（点击数+1）
 - `POST /api/ads/:id/duplicate` - 复制广告
 
-### 表单配置接口（任务3预留）
+### 表单配置接口（任务3）
 
-- `GET /api/form-schema` - 获取表单配置
+- `GET /api/form-schema` - 获取表单配置（返回 JSON 格式的 FormFieldConfig[]）
 
 ### 媒体上传接口（任务2预留）
 
@@ -227,9 +231,28 @@ npm run lint
 
 切换方式在 `src/shared/repository/adRepository.ts` 中自动处理。
 
-### 扩展表单字段
+### 扩展表单字段（任务3）
 
-修改 `server/src/routes/form-schema.ts` 中的配置，前端会自动根据配置渲染表单。
+表单完全基于后端配置动态渲染，修改 `server/src/routes/form-schema.ts` 中的配置即可：
+
+1. **添加新字段**：在 schema 数组中添加新的 `FormFieldConfig` 对象
+2. **修改字段**：更新现有字段的 `label`、`placeholder`、`validator` 等属性
+3. **自动生效**：前端会自动根据新配置渲染表单和校验规则
+
+**示例**：
+
+```typescript
+{
+  field: 'title',
+  label: '广告标题',
+  placeholder: '请输入广告标题',
+  component: 'input',
+  validator: { required: true, maxLength: 30 },
+}
+```
+
+**支持的组件类型**：`input`、`textarea`、`number`、`url`
+**支持的校验规则**：`required`、`maxLength`、`min`、`max`、`url`
 
 ### 添加视频功能
 

@@ -7,9 +7,11 @@ type AdsState = {
   ads: Ad[]
   schema: FormFieldConfig[]
   isLoading: boolean
+  isLoadingSchema: boolean
   isProcessing: boolean
   error?: string
   loadAds: () => Promise<void>
+  loadFormSchema: () => Promise<void>
   createAd: (payload: AdDraft) => Promise<Ad>
   updateAd: (id: string, payload: AdDraft) => Promise<Ad>
   duplicateAd: (id: string) => Promise<Ad>
@@ -22,20 +24,33 @@ export const useAdsStore = create<AdsState>((set, get) => ({
   ads: [],
   schema: [],
   isLoading: false,
+  isLoadingSchema: false,
   isProcessing: false,
 
   loadAds: async () => {
     set({ isLoading: true, error: undefined })
     try {
-      const [ads, schema] = await Promise.all([
-        adRepository.list(),
-        adRepository.getFormSchema(),
-      ])
-      set({ ads, schema })
+      const ads = await adRepository.list()
+      set({ ads })
     } catch (error) {
       set({ error: (error as Error).message })
     } finally {
       set({ isLoading: false })
+    }
+  },
+
+  loadFormSchema: async () => {
+    if (get().schema.length > 0) {
+      return
+    }
+    set({ isLoadingSchema: true, error: undefined })
+    try {
+      const schema = await adRepository.getFormSchema()
+      set({ schema })
+    } catch (error) {
+      set({ error: (error as Error).message })
+    } finally {
+      set({ isLoadingSchema: false })
     }
   },
 
