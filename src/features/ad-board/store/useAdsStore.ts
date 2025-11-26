@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Ad, AdDraft, FormFieldConfig } from '@shared/types/ad'
-import { localAdRepository } from '@shared/repository/adRepository'
+import { adRepository } from '@shared/repository/adRepository'
 import { sortAdsByBid } from '@shared/utils/bid'
 
 type AdsState = {
@@ -28,8 +28,8 @@ export const useAdsStore = create<AdsState>((set, get) => ({
     set({ isLoading: true, error: undefined })
     try {
       const [ads, schema] = await Promise.all([
-        localAdRepository.list(),
-        localAdRepository.getFormSchema(),
+        adRepository.list(),
+        adRepository.getFormSchema(),
       ])
       set({ ads, schema })
     } catch (error) {
@@ -42,7 +42,7 @@ export const useAdsStore = create<AdsState>((set, get) => ({
   createAd: async (payload) => {
     set({ isProcessing: true, error: undefined })
     try {
-      const ad = await localAdRepository.create(payload)
+      const ad = await adRepository.create(payload)
       set({ ads: sortAdsByBid([...get().ads, ad]) })
       return ad
     } catch (error) {
@@ -56,7 +56,7 @@ export const useAdsStore = create<AdsState>((set, get) => ({
   updateAd: async (id, payload) => {
     set({ isProcessing: true, error: undefined })
     try {
-      const updated = await localAdRepository.update(id, payload)
+      const updated = await adRepository.update(id, payload)
       set({
         ads: sortAdsByBid(
           get().ads.map((ad) => (ad.id === id ? updated : ad)),
@@ -74,7 +74,7 @@ export const useAdsStore = create<AdsState>((set, get) => ({
   duplicateAd: async (id) => {
     set({ isProcessing: true, error: undefined })
     try {
-      const duplicated = await localAdRepository.duplicate(id)
+      const duplicated = await adRepository.duplicate(id)
       set({ ads: sortAdsByBid([...get().ads, duplicated]) })
       return duplicated
     } catch (error) {
@@ -88,7 +88,7 @@ export const useAdsStore = create<AdsState>((set, get) => ({
   deleteAd: async (id) => {
     set({ isProcessing: true, error: undefined })
     try {
-      await localAdRepository.delete(id)
+      await adRepository.delete(id)
       set({ ads: get().ads.filter((ad) => ad.id !== id) })
     } catch (error) {
       set({ error: (error as Error).message })
@@ -100,7 +100,7 @@ export const useAdsStore = create<AdsState>((set, get) => ({
 
   clickAd: async (id) => {
     try {
-      const clicked = await localAdRepository.click(id)
+      const clicked = await adRepository.click(id)
       set({
         ads: sortAdsByBid(
           get().ads.map((ad) => (ad.id === id ? clicked : ad)),
@@ -114,7 +114,7 @@ export const useAdsStore = create<AdsState>((set, get) => ({
   },
 
   seedAds: async () => {
-    await localAdRepository.seed()
+    await adRepository.seed()
     await get().loadAds()
   },
 }))

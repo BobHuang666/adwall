@@ -4,6 +4,7 @@
 
 ## 技术栈
 
+### 前端
 - **框架**: React 19 + TypeScript
 - **构建工具**: Vite (rolldown)
 - **状态管理**: Zustand
@@ -11,32 +12,27 @@
 - **UI 组件**: Radix UI (Dialog, Toast)
 - **样式**: CSS Variables + 玻璃拟态设计
 
+### 后端
+- **框架**: Express.js + TypeScript
+- **运行时**: Node.js (ES Modules)
+- **开发工具**: tsx (热重载)
+
 ## 项目结构
 
 ```text
-src/
-├── app/                    # 应用入口与路由
-│   ├── AppShell.tsx       # 应用外壳组件
-│   └── AppRouter.tsx      # 路由配置
-├── features/              # 功能模块
-│   └── ad-board/         # 广告墙功能
-│       ├── components/   # UI 组件
-│       │   ├── AdBoardPage.tsx
-│       │   ├── AdCard.tsx
-│       │   ├── AdFormDrawer.tsx
-│       │   └── DeleteConfirmDialog.tsx
-│       └── store/        # 状态管理
-│           └── useAdsStore.ts
-└── shared/               # 共享代码
-    ├── repository/       # 数据仓储层
-    │   ├── adRepository.ts
-    │   └── adSeed.ts
-    ├── styles/          # 样式系统
-    │   └── tokens.css
-    ├── types/          # 类型定义
-    │   └── ad.ts
-    └── utils/         # 工具函数
-        └── bid.ts     # 竞价排序逻辑
+adwall/
+├── src/                    # 前端代码
+│   ├── app/               # 应用入口与路由
+│   ├── features/          # 功能模块
+│   └── shared/           # 共享代码
+│       ├── repository/   # 数据仓储层（支持 localStorage 和 HTTP）
+│       ├── types/        # 类型定义
+│       └── utils/        # 工具函数
+└── server/                # 后端代码
+    └── src/
+        ├── routes/       # API 路由
+        ├── services/     # 业务逻辑
+        └── types.ts      # 类型定义
 ```
 
 ## 核心功能
@@ -51,33 +47,101 @@ src/
 - ✅ 点击广告（跳转落地页 + 点击数 +1）
 - ✅ 竞价排序算法：`出价 + 出价 × 点击数 × 0.42`
 
-### 进阶任务（预留接口）
+### 进阶任务
 
-- 🔄 前后端分离版本（`httpAdRepository` 已预留）
-- 🔄 视频上传与播放（`mediaAssets`、`videoUrls` 字段已预留）
-- 🔄 动态表单渲染（`FormFieldConfig` 已支持）
+- ✅ **任务1：前后端分离版本**（已完成）
+  - Express.js 后端服务
+  - RESTful API 接口
+  - HTTP Repository 实现
+  - 支持前后端独立部署
+- 🔄 **任务2：视频上传与播放**（接口已预留）
+  - `POST /api/media/upload` 接口已创建
+  - `mediaAssets`、`videoUrls` 字段已支持
+- 🔄 **任务3：动态表单渲染**（接口已预留）
+  - `GET /api/form-schema` 接口已实现
+  - 前端已支持动态表单渲染
 
 ## 运行方式
 
 ### 开发环境
 
+#### 方式一：前后端分离（推荐）
+
+1. **安装依赖**：
+   ```bash
+   # 安装前端依赖
+   npm install
+   
+   # 安装后端依赖
+   cd server
+   npm install
+   cd ..
+   ```
+
+2. **启动服务**：
+   ```bash
+   # 同时启动前后端（推荐）
+   npm run dev:all
+   
+   # 或分别启动
+   npm run dev:server  # 启动后端（端口 3001）
+   npm run dev         # 启动前端（端口 5173）
+   ```
+
+3. **访问应用**：
+   - 前端：http://localhost:5173
+   - 后端 API：http://localhost:3001/api
+
+#### 方式二：纯前端模式（localStorage）
+
+如果后端服务未启动，前端会自动降级到 localStorage 模式。
+
+或通过环境变量强制使用 localStorage：
 ```bash
-npm install
-npm run dev
+# 创建 .env.development 文件
+VITE_USE_LOCAL_STORAGE=true
 ```
 
 ### 构建生产版本
 
 ```bash
+# 构建前端
 npm run build
+
+# 构建后端
+cd server
+npm run build
+cd ..
+
+# 预览前端
 npm run preview
 ```
 
 ## 数据存储
 
-当前版本使用 `localStorage` 存储广告数据，存储键为 `mini-adwall.ads.v1`。
+### 前后端分离模式（默认）
 
-首次访问时会自动初始化示例数据（3 条广告）。
+- 数据存储在服务器内存中
+- 通过 RESTful API 进行数据交互
+- 服务重启后数据会丢失（后续可扩展为数据库）
+
+### 纯前端模式（降级方案）
+
+- 使用 `localStorage` 存储广告数据
+- 存储键为 `mini-adwall.ads.v1`
+- 首次访问时会自动初始化示例数据（3 条广告）
+
+## 环境配置
+
+创建 `.env.development` 或 `.env.production` 文件：
+
+```env
+# 后端 API 地址
+VITE_API_BASE_URL=http://localhost:3001
+
+# 是否使用 localStorage（可选）
+# VITE_USE_LOCAL_STORAGE=true
+```
 
 ## 设计说明
 
@@ -116,19 +180,49 @@ npm run lint
 
 部署完成后，项目会自动发布到 GitHub Pages，无需手动操作。
 
+## API 接口文档
+
+### 广告相关接口
+
+- `GET /api/ads` - 获取广告列表（已按竞价排序）
+- `POST /api/ads` - 创建广告
+- `PUT /api/ads/:id` - 更新广告
+- `DELETE /api/ads/:id` - 删除广告
+- `POST /api/ads/:id/click` - 点击广告（点击数+1）
+- `POST /api/ads/:id/duplicate` - 复制广告
+
+### 表单配置接口（任务3预留）
+
+- `GET /api/form-schema` - 获取表单配置
+
+### 媒体上传接口（任务2预留）
+
+- `POST /api/media/upload` - 上传媒体文件
+
 ## 开发说明
 
-### 扩展后端接口
+### Repository 切换
 
-在 `src/shared/repository/adRepository.ts` 中实现 `httpAdRepository`，替换 `localAdRepository` 即可切换到 HTTP 模式。
+项目支持两种数据存储方式，通过环境变量自动切换：
+
+- **HTTP 模式**（默认）：使用 `httpAdRepository`，调用后端 API
+- **LocalStorage 模式**：使用 `localAdRepository`，数据存储在浏览器
+
+切换方式在 `src/shared/repository/adRepository.ts` 中自动处理。
 
 ### 扩展表单字段
 
-修改 `src/shared/repository/adRepository.ts` 中的 `defaultFormSchema` 配置，或通过后端接口返回动态配置。
+修改 `server/src/routes/form-schema.ts` 中的配置，前端会自动根据配置渲染表单。
 
 ### 添加视频功能
 
-在 `AdFormDrawer` 的 `mediaSlot` prop 中插入视频上传组件，数据会自动保存到 `videoUrls` 字段。
+1. 实现 `server/src/routes/media.ts` 中的上传逻辑
+2. 在 `AdFormDrawer` 的 `mediaSlot` prop 中插入视频上传组件
+3. 数据会自动保存到 `videoUrls` 字段
+
+### 扩展数据库
+
+在 `server/src/services/adService.ts` 中替换内存存储为数据库操作即可。
 
 ## License
 

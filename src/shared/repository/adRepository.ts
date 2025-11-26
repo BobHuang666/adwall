@@ -183,14 +183,95 @@ const createLocalAdRepository = (): AdRepository => {
 
 export const localAdRepository = createLocalAdRepository()
 
-export const httpAdRepository: AdRepository = {
-  list: () => Promise.reject(new Error('HTTP 仓储尚未实现')),
-  create: () => Promise.reject(new Error('HTTP 仓储尚未实现')),
-  update: () => Promise.reject(new Error('HTTP 仓储尚未实现')),
-  duplicate: () => Promise.reject(new Error('HTTP 仓储尚未实现')),
-  delete: () => Promise.reject(new Error('HTTP 仓储尚未实现')),
-  click: () => Promise.reject(new Error('HTTP 仓储尚未实现')),
-  seed: () => Promise.reject(new Error('HTTP 仓储尚未实现')),
-  getFormSchema: () => Promise.reject(new Error('HTTP 仓储尚未实现')),
+// API 基础 URL，从环境变量读取，默认为开发环境地址
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+
+// HTTP 请求辅助函数
+const apiRequest = async <T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T> => {
+  const url = `${API_BASE_URL}${endpoint}`
+  const response = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+    ...options,
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      error: `请求失败: ${response.status} ${response.statusText}`,
+    }))
+    throw new Error(error.error || `请求失败: ${response.status}`)
+  }
+
+  // 204 No Content 响应没有 body
+  if (response.status === 204) {
+    return undefined as T
+  }
+
+  return response.json()
 }
+
+export const httpAdRepository: AdRepository = {
+  list: async () => {
+    return apiRequest<Ad[]>('/api/ads')
+  },
+
+  create: async (payload: AdDraft) => {
+    return apiRequest<Ad>('/api/ads', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  update: async (id: string, payload: AdDraft) => {
+    return apiRequest<Ad>(`/api/ads/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  duplicate: async (id: string) => {
+    return apiRequest<Ad>(`/api/ads/${id}/duplicate`, {
+      method: 'POST',
+    })
+  },
+
+  delete: async (id: string) => {
+    await apiRequest<void>(`/api/ads/${id}`, {
+      method: 'DELETE',
+    })
+  },
+
+  click: async (id: string) => {
+    return apiRequest<Ad>(`/api/ads/${id}/click`, {
+      method: 'POST',
+    })
+  },
+
+  seed: async () => {
+    // 后端暂不支持 seed，使用创建接口批量创建种子数据
+    // 或者可以添加一个专门的 seed 接口
+    throw new Error('HTTP 模式下暂不支持 seed 操作')
+  },
+
+  getFormSchema: async () => {
+    return apiRequest<FormFieldConfig[]>('/api/form-schema')
+  },
+}
+
+// 根据环境变量选择使用的 repository
+// 如果 VITE_USE_LOCAL_STORAGE=true，使用 localStorage
+// 否则使用 HTTP API
+const useLocalStorage =
+  import.meta.env.VITE_USE_LOCAL_STORAGE === 'true' ||
+  !import.meta.env.VITE_API_BASE_URL
+
+export const adRepository: AdRepository = useLocalStorage
+  ? localAdRepository
+  : httpAdRepository
 
