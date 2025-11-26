@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid'
-import type { Ad, AdDraft, AdFormMode, FormFieldConfig } from '@shared/types/ad'
+import type { Ad, AdDraft, FormFieldConfig } from '@shared/types/ad'
 import { sortAdsByBid } from '@shared/utils/bid'
 import { seedAds } from './adSeed'
 

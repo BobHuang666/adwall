@@ -24,8 +24,7 @@ const buildZodSchema = (fields: FormFieldConfig[]) => {
 
     if (field.component === 'number') {
       let baseNumber = z.number({
-        required_error: `${field.label}为必填项`,
-        invalid_type_error: `${field.label}需要为数字`,
+        message: `${field.label}需要为数字`,
       })
 
       if (typeof rules.min === 'number') {
@@ -47,33 +46,33 @@ const buildZodSchema = (fields: FormFieldConfig[]) => {
           value === '' || value === undefined || value === null
             ? undefined
             : Number(value),
-        baseNumber,
+        isOptional ? baseNumber.optional() : baseNumber,
       )
 
-      shape[field.field] = isOptional
-        ? numberValidator.optional()
-        : numberValidator
+      shape[field.field] = numberValidator
       return
     }
 
-    let stringValidator = z.string({
-      required_error: `${field.label}为必填项`,
+    let stringValidator: z.ZodString | z.ZodOptional<z.ZodString> = z.string({
+      message: `${field.label}为必填项`,
     })
 
     if (field.component === 'url') {
-      stringValidator = stringValidator.url(`${field.label}需要为合法链接`)
+      stringValidator = stringValidator.url(`${field.label}需要为合法链接`) as z.ZodString
     }
 
     if (typeof rules.maxLength === 'number') {
       stringValidator = stringValidator.max(
         rules.maxLength,
         `${field.label}最多 ${rules.maxLength} 字`,
-      )
+      ) as z.ZodString
     }
 
-    stringValidator = isOptional
-      ? stringValidator.optional()
-      : stringValidator.min(1, `${field.label}为必填项`)
+    if (isOptional) {
+      stringValidator = stringValidator.optional()
+    } else {
+      stringValidator = (stringValidator as z.ZodString).min(1, `${field.label}为必填项`)
+    }
 
     shape[field.field] = stringValidator
   })
@@ -98,7 +97,7 @@ export const AdFormDrawer = ({
     reset,
     handleSubmit,
     formState: { errors },
-  } = useForm<AdDraft>({
+  } = useForm<Record<string, unknown>>({
     resolver: zodResolver(zodSchema),
     defaultValues,
   })
@@ -151,8 +150,13 @@ export const AdFormDrawer = ({
             className="dialog__form"
             onSubmit={handleSubmit(async (values) => {
               await onSubmit({
-                ...values,
-                price: Number(values.price),
+                title: values.title as string,
+                author: values.author as string,
+                description: values.description as string,
+                url: values.url as string,
+                price: typeof values.price === 'number' ? values.price : Number(values.price) || 0,
+                mediaAssets: (values.mediaAssets as string[]) ?? [],
+                videoUrls: (values.videoUrls as string[]) ?? [],
               })
             })}
           >
